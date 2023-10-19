@@ -1,6 +1,8 @@
 import json
 import spacy
 import re
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 with open('dev.json', 'r') as file:
     data = json.load(file)
@@ -90,6 +92,25 @@ def predict_answer(conversation, question, choices):
     predicted_idx = scores.index(max(scores))
     return choices[predicted_idx]
 
+def evaluation_metrics(true_answer, predicted_answer):
+
+    # Exact Match
+    exact_match = 0
+    for (true, predicted) in zip(true_answer, predicted_answer):
+        if true == predicted:
+            exact_match += 1
+    print("EXACT MATCH:", exact_match)
+
+    # Similaridade - uso do coseno  ##### POR CONFIRMAR
+    tf_vect = TfidfVectorizer(ngram_range=(1, 3), strip_accents='unicode', max_features=500, min_df=5, max_df=0.75)
+
+    true = tf_vect.fit_transform(true_answer)
+    predicted = tf_vect.transform(predicted_answer)
+
+    cosine_matrix = cosine_similarity(true, predicted)
+    similarity = sum(cosine_matrix[i][i] for i in range(len(cosine_matrix)))
+    print("SIMILARIDADE:", similarity)
+
 # Testar com uma amostra
 sample_conversation_text = " ".join(data[0][0])
 sample_qa_pair = data[0][1][0]
@@ -104,6 +125,9 @@ print(f"Predicted: {predicted_answer}, Actual: {sample_answer}")
 correct_predictions = 0
 total_questions = 0
 
+true_answers = []
+predicted_answers = []
+
 for conversation_data in data:
     conversation_text = " ".join(conversation_data[0])
     
@@ -115,9 +139,12 @@ for conversation_data in data:
         predicted_answer = predict_answer(conversation_text, question, choices)
         if predicted_answer == answer:
             correct_predictions += 1
-        
+
+        true_answers.append(answer)
+        predicted_answers.append(predicted_answer)
         total_questions += 1
 
 accuracy = correct_predictions / total_questions if total_questions > 0 else 0
-(correct_predictions, total_questions, accuracy)
+print(correct_predictions, total_questions, accuracy)
 
+evaluation_metrics(true_answers, predicted_answers)
