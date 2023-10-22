@@ -1,8 +1,11 @@
 import json
 import spacy
 import re
+from sklearn.metrics import f1_score
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import TfidfVectorizer
+from transformers import AutoTokenizer, AutoModel
+import torch
 
 with open('dev.json', 'r') as file:
     data = json.load(file)
@@ -64,26 +67,33 @@ def analyze_sentiment(text):
 def predict_answer(conversation, question, choices):
 
     conversation_sentiment = analyze_sentiment(conversation)
-    
+
     scores = [0] * len(choices)
     
     # Regra 1: Bigramas
     conversation_bigrams = set(extract_bigrams(conversation))
+    question_bigrams = set(extract_bigrams(question))
     choices_bigrams = [set(extract_bigrams(choice)) for choice in choices]
     for i, choice_bigrams in enumerate(choices_bigrams):
         scores[i] += len(conversation_bigrams.intersection(choice_bigrams))
+        scores[i] += len(question_bigrams.intersection(choice_bigrams))
     
     # Regra 2: Entidades
     conversation_entities = set(extract_entities(conversation))
+    question_entities = set(extract_entities(question))
     choices_entities = [set(extract_entities(choice)) for choice in choices]
     for i, choice_entities in enumerate(choices_entities):
         scores[i] += len(conversation_entities.intersection(choice_entities))
-    
+        scores[i] += len(question_entities.intersection(choice_entities))
+
     # Regra 3: Sentimento
     for i, choice in enumerate(choices):
         choice_sentiment = analyze_sentiment(choice)
-        # Adicionar pontuação se o sentimento da opção de resposta corresponder ao sentimento 
+        # Adicionar score se o sentimento da opção de resposta corresponder ao sentimento
         scores[i] += (conversation_sentiment == choice_sentiment)
+        # Adicionar score se o sentimento da opção de resposta corresponder ao sentimento da pergunta
+        question_sentiment = analyze_sentiment(question)
+        scores[i] += (question_sentiment == choice_sentiment)
  
     # Regra 4: Funções Gramaticais e Relações
     # ......
@@ -92,6 +102,33 @@ def predict_answer(conversation, question, choices):
     predicted_idx = scores.index(max(scores))
     return choices[predicted_idx]
 
+
+# Funções necessárias para o SAS
+def calculate_sas(true_answer, predicted_answer, model_name="sentence-transformers/paraphrase-MiniLM-L6-v2"):
+
+    # Carregar modelo e tokenizer pré-treinados
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModel.from_pretrained(model_name)
+
+    # Funciton to get embeddings
+    def get_embeddings(texts):
+        inputs = tokenizer(texts, padding=True, truncation=True, return_tensors="pt", max_length=128)
+        with torch.no_grad():
+            embeddings = model(**inputs).last_hidden_state
+        # We use the mean of the token embeddings for the sentence embeddings
+        return torch.mean(embeddings, dim=1)
+
+    # Get embeddings for true and predicted answers
+    true_embeddings = get_embeddings(true_answer)
+    predicted_embeddings = get_embeddings(predicted_answer)
+
+    # Calculate SAS
+    sas = torch.nn.functional.cosine_similarity(true_embeddings, predicted_embeddings, dim=1)
+    sas_score = torch.mean(sas).item()  # get the mean as a Python scalar
+
+    return sas_score
+
+# Avaliações Métricas
 def evaluation_metrics(true_answer, predicted_answer):
 
     # Exact Match
@@ -100,6 +137,10 @@ def evaluation_metrics(true_answer, predicted_answer):
         if true == predicted:
             exact_match += 1
     print("EXACT MATCH:", exact_match)
+
+    # F1-score
+    f1 = f1_score(true_answer, predicted_answer, average='weighted')
+    print("F1-SCORE:", f1)
 
     # Similaridade - uso do coseno  ##### POR CONFIRMAR
     tf_vect = TfidfVectorizer(ngram_range=(1, 3), strip_accents='unicode', max_features=500, min_df=5, max_df=0.75)
@@ -111,40 +152,6 @@ def evaluation_metrics(true_answer, predicted_answer):
     similarity = sum(cosine_matrix[i][i] for i in range(len(cosine_matrix)))
     print("SIMILARIDADE:", similarity)
 
-# Testar com uma amostra
-sample_conversation_text = " ".join(data[0][0])
-sample_qa_pair = data[0][1][0]
-sample_question = sample_qa_pair['question']
-sample_choices = sample_qa_pair['choice']
-sample_answer = sample_qa_pair['answer']
-
-predicted_answer = predict_answer(sample_conversation_text, sample_question, sample_choices)
-print(f"Predicted: {predicted_answer}, Actual: {sample_answer}")
-
-# Testar tudo e fazer previsões
-correct_predictions = 0
-total_questions = 0
-
-true_answers = []
-predicted_answers = []
-
-for conversation_data in data:
-    conversation_text = " ".join(conversation_data[0])
-    
-    for qa_pair in conversation_data[1]:
-        question = qa_pair['question']
-        choices = qa_pair['choice']
-        answer = qa_pair['answer']
-        
-        predicted_answer = predict_answer(conversation_text, question, choices)
-        if predicted_answer == answer:
-            correct_predictions += 1
-
-        true_answers.append(answer)
-        predicted_answers.append(predicted_answer)
-        total_questions += 1
-
-accuracy = correct_predictions / total_questions if total_questions > 0 else 0
-print(correct_predictions, total_questions, accuracy)
-
-evaluation_metrics(true_answers, predicted_answers)
+    # Chamar a função do SAS
+    sas_score = calculate_sas(true_answer, predicted_answer)
+    print("SAS:", sas_score)
