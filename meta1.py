@@ -96,7 +96,7 @@ def predict_answer(conversation, question, choices):
         scores[i] += (question_sentiment == choice_sentiment)
  
     # Regra 4: Funções Gramaticais e Relações
-    # ......
+    # TODO: adicionar as funções gramaticais e relações
 
     # Prever a opção de resposta com a pontuação mais alta
     predicted_idx = scores.index(max(scores))
@@ -104,6 +104,7 @@ def predict_answer(conversation, question, choices):
 
 
 # Funções necessárias para o SAS
+# TODO: verificar se isto tá certo
 def calculate_sas(true_answer, predicted_answer, model_name="sentence-transformers/paraphrase-MiniLM-L6-v2"):
 
     # Carregar modelo e tokenizer pré-treinados
