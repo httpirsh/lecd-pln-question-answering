@@ -12,16 +12,6 @@ with open('dev.json', 'r') as file:
 
 nlp = spacy.load("en_core_web_sm")
 
-conversation = " ".join(data[0][0])
-question = data[0][1][0]['question']
-choices = data[0][1][0]['choice']
-answer = data[0][1][0]['answer']
-
-# Processar tudo com o spaCy
-conversation_nlp = nlp(conversation)
-question_nlp = nlp(question)
-choices_nlp = [nlp(choice) for choice in choices]
-
 # Extrair n-gramas e entidades
 def extract_bigrams(text):
     tokens = text.split()
@@ -48,10 +38,9 @@ Opções de resposta: [['To'], ['To'], ['To']]
 '''
 
 # Análise de sentimentos
-positive_words = ["love", "enjoy", "good", "happy", "like", "wonderful", "great"]
-negative_words = ["hate", "dislike", "bad", "sad", "terrible", "horrible"]
-
 def analyze_sentiment(text):
+    positive_words = ["love", "enjoy", "good", "happy", "like", "wonderful", "great"]
+    negative_words = ["hate", "dislike", "bad", "sad", "terrible", "horrible"]
     
     positive_count = sum(word.lower() in text.lower().split() for word in positive_words)
     negative_count = sum(word.lower() in text.lower().split() for word in negative_words)
@@ -66,8 +55,6 @@ def analyze_sentiment(text):
 # Prever a resposta
 def predict_answer(conversation, question, choices):
 
-    conversation_sentiment = analyze_sentiment(conversation)
-
     scores = [0] * len(choices)
     
     # Regra 1: Bigramas
@@ -75,18 +62,18 @@ def predict_answer(conversation, question, choices):
     question_bigrams = set(extract_bigrams(question))
     choices_bigrams = [set(extract_bigrams(choice)) for choice in choices]
     for i, choice_bigrams in enumerate(choices_bigrams):
-        scores[i] += len(conversation_bigrams.intersection(choice_bigrams))
-        scores[i] += len(question_bigrams.intersection(choice_bigrams))
+        scores[i] += len(conversation_bigrams.intersection(choice_bigrams).intersection(question_bigrams))
     
     # Regra 2: Entidades
     conversation_entities = set(extract_entities(conversation))
     question_entities = set(extract_entities(question))
     choices_entities = [set(extract_entities(choice)) for choice in choices]
     for i, choice_entities in enumerate(choices_entities):
-        scores[i] += len(conversation_entities.intersection(choice_entities))
-        scores[i] += len(question_entities.intersection(choice_entities))
+        scores[i] += len(conversation_entities.intersection(choice_entities).intersection(question_entities))
 
     # Regra 3: Sentimento
+    conversation_sentiment = analyze_sentiment(conversation)
+
     for i, choice in enumerate(choices):
         choice_sentiment = analyze_sentiment(choice)
         # Adicionar score se o sentimento da opção de resposta corresponder ao sentimento
@@ -97,6 +84,13 @@ def predict_answer(conversation, question, choices):
  
     # Regra 4: Funções Gramaticais e Relações
     # TODO: adicionar as funções gramaticais e relações
+    verbs = []
+    for token in nlp(conversation):
+        if token.tag_.startswith("V") and token.lemma_ not in verbs:
+            verbs.append(token.lemma_)
+    for i, choice in enumerate(choices):
+        lemmas = [token.lemma_ for token in nlp(choice)]
+        scores[i] += sum(verbo in lemmas for verbo in verbs)
 
     # Prever a opção de resposta com a pontuação mais alta
     predicted_idx = scores.index(max(scores))
@@ -156,3 +150,43 @@ def evaluation_metrics(true_answer, predicted_answer):
     # Chamar a função do SAS
     sas_score = calculate_sas(true_answer, predicted_answer)
     print("SAS:", sas_score)
+
+def results(data):
+
+    true_answers = []
+    predicted_answers = []
+
+    for conversation_data in data:
+        conversation_text = " ".join(conversation_data[0])
+
+        for qa_pair in conversation_data[1]:
+            question = qa_pair['question']
+            choices = qa_pair['choice']
+            answer = qa_pair['answer']
+
+            quest_nlp = nlp(question)
+            tokens_question = {}
+
+            for token in quest_nlp:
+                tokens_question[token.text] = [token.tag, token.ent_type_, token.dep_]
+
+            if ("\\bthe woman\\b" in question and "\\bthe man\\b" not in question
+                    and tokens_question["woman"][2] == "nsubj"):
+                conversation_text = [conversation_text[i][3:] for i in range(len(conversation_text))
+                                     if conversation_text[i].startswith("W:") or conversation_text[i].startswith("F:")]
+
+            elif ("\\bthe man\\b" in question and "\\bthe woman\\b" not in question
+                  and tokens_question["man"][2] == "nsubj"):
+                conversation_text = [conversation_text[i][3:] for i in range(len(conversation_text))
+                                     if conversation_text[i].startswith("M:")]
+
+            conversation_text = " ".join(conversation_text)
+
+            predicted_answer = predict_answer(conversation_text, question, choices)
+
+            true_answers.append(answer)
+            predicted_answers.append(predicted_answer)
+
+    evaluation_metrics(true_answers, predicted_answers)
+
+results(data)
