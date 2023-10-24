@@ -1,16 +1,20 @@
 import json
 import spacy
-import re
 from sklearn.metrics import f1_score
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import TfidfVectorizer
 from transformers import AutoTokenizer, AutoModel
 import torch
+import string
+import nltk
+nltk.download('punkt')
+nltk.download('averaged_perceptron_tagger')
 
-with open('dev.json', 'r') as file:
+with open('test.json', 'r') as file:
     data = json.load(file)
 
 nlp = spacy.load("en_core_web_sm")
+punct = string.punctuation
 
 # Extrair n-gramas e entidades
 def extract_bigrams(text):
@@ -22,8 +26,8 @@ def extract_bigrams(text):
         bigrams.append(bigram)
     return bigrams
 
-def extract_entities(text):
-    return re.findall(r'\b[A-Z][a-z]*\b', text)
+#def extract_entities(text):
+    #return re.findall(r'\b[A-Z][a-z]*\b', text)
 
 '''
 Bigramas extraídos:
@@ -40,10 +44,10 @@ Opções de resposta: [['To'], ['To'], ['To']]
 # Análise de sentimentos
 def analyze_sentiment(text):
     positive_words = ["love", "enjoy", "good", "happy", "like", "wonderful", "great"]
-    negative_words = ["hate", "dislike", "bad", "sad", "terrible", "horrible"]
+    negative_words = ["hate", "dislike", "bad", "sad", "terrible", "horrible", "tired"]
     
-    positive_count = sum(word.lower() in text.lower().split() for word in positive_words)
-    negative_count = sum(word.lower() in text.lower().split() for word in negative_words)
+    positive_count = sum(word in text.lower().split() for word in positive_words)
+    negative_count = sum(word in text.lower().split() for word in negative_words)
     
     if positive_count > negative_count:
         return "Positive"
@@ -65,11 +69,12 @@ def predict_answer(conversation, question, choices):
         scores[i] += len(conversation_bigrams.intersection(choice_bigrams).intersection(question_bigrams))
     
     # Regra 2: Entidades
+    '''
     conversation_entities = set(extract_entities(conversation))
     question_entities = set(extract_entities(question))
     choices_entities = [set(extract_entities(choice)) for choice in choices]
     for i, choice_entities in enumerate(choices_entities):
-        scores[i] += len(conversation_entities.intersection(choice_entities).intersection(question_entities))
+        scores[i] += len(conversation_entities.intersection(choice_entities).intersection(question_entities))'''
 
     # Regra 3: Sentimento
     conversation_sentiment = analyze_sentiment(conversation)
@@ -83,11 +88,16 @@ def predict_answer(conversation, question, choices):
         scores[i] += (question_sentiment == choice_sentiment)
  
     # Regra 4: Funções Gramaticais e Relações
-    # TODO: adicionar as funções gramaticais e relações
     verbs = []
-    for token in nlp(conversation):
-        if token.tag_.startswith("V") and token.lemma_ not in verbs:
-            verbs.append(token.lemma_)
+    sentences = nltk.sent_tokenize(conversation)
+    for sent in sentences:
+        tokens = nltk.word_tokenize(sent)
+        tags = nltk.pos_tag(tokens)
+        for tag in tags:
+            if tag[1].startswith("V") and tag[0] not in verbs:
+                v = nlp(tag[0])
+                verbs.append(v[0].lemma_)
+
     for i, choice in enumerate(choices):
         lemmas = [token.lemma_ for token in nlp(choice)]
         scores[i] += sum(verbo in lemmas for verbo in verbs)
@@ -95,7 +105,6 @@ def predict_answer(conversation, question, choices):
     # Prever a opção de resposta com a pontuação mais alta
     predicted_idx = scores.index(max(scores))
     return choices[predicted_idx]
-
 
 # Funções necessárias para o SAS
 # TODO: verificar se isto tá certo
@@ -125,6 +134,7 @@ def calculate_sas(true_answer, predicted_answer, model_name="sentence-transforme
 
 # Avaliações Métricas
 def evaluation_metrics(true_answer, predicted_answer):
+    print("Nº total de questões:", len(true_answer))
 
     # Exact Match
     exact_match = 0
@@ -137,8 +147,8 @@ def evaluation_metrics(true_answer, predicted_answer):
     f1 = f1_score(true_answer, predicted_answer, average='weighted')
     print("F1-SCORE:", f1)
 
-    # Similaridade - uso do coseno  ##### POR CONFIRMAR
-    tf_vect = TfidfVectorizer(ngram_range=(1, 3), strip_accents='unicode', max_features=500, min_df=5, max_df=0.75)
+    # Similaridade - uso do coseno
+    tf_vect = TfidfVectorizer(ngram_range=(1, 2), strip_accents='unicode', max_features=500, min_df=3, max_df=0.5)
 
     true = tf_vect.fit_transform(true_answer)
     predicted = tf_vect.transform(predicted_answer)
@@ -151,34 +161,53 @@ def evaluation_metrics(true_answer, predicted_answer):
     sas_score = calculate_sas(true_answer, predicted_answer)
     print("SAS:", sas_score)
 
+def remove_punct(text):
+    text = text.split(" ")
+    new_text = []
+    for word in text:
+        for car in word:
+            if car in punct:
+                word = word.replace(car, "")
+        new_text.append(word)
+
+    return " ".join(new_text)
+
 def results(data):
 
     true_answers = []
     predicted_answers = []
 
     for conversation_data in data:
-        conversation_text = " ".join(conversation_data[0])
+        # PRÉ-PROCESSAMENTO
 
         for qa_pair in conversation_data[1]:
-            question = qa_pair['question']
+            conversation_text = conversation_data[0]
+
+            question = remove_punct(qa_pair['question'].lower())
             choices = qa_pair['choice']
-            answer = qa_pair['answer']
+            answer = remove_punct(qa_pair['answer'].lower())
+
+            for i in range(len(choices)):
+                choices[i] = remove_punct(choices[i].lower())
 
             quest_nlp = nlp(question)
             tokens_question = {}
 
             for token in quest_nlp:
-                tokens_question[token.text] = [token.tag, token.ent_type_, token.dep_]
+                tokens_question[token.text] = token.dep_
 
             if ("\\bthe woman\\b" in question and "\\bthe man\\b" not in question
-                    and tokens_question["woman"][2] == "nsubj"):
-                conversation_text = [conversation_text[i][3:] for i in range(len(conversation_text))
+                    and tokens_question["woman"] == "nsubj"):
+                conversation_text = [conversation_text[i][conversation_text[i].index(":"):] for i in range(len(conversation_text))
                                      if conversation_text[i].startswith("W:") or conversation_text[i].startswith("F:")]
 
             elif ("\\bthe man\\b" in question and "\\bthe woman\\b" not in question
-                  and tokens_question["man"][2] == "nsubj"):
-                conversation_text = [conversation_text[i][3:] for i in range(len(conversation_text))
+                  and tokens_question["man"] == "nsubj"):
+                conversation_text = [conversation_text[i][conversation_text[i].index(":"):] for i in range(len(conversation_text))
                                      if conversation_text[i].startswith("M:")]
+
+            else:
+                conversation_text = [conversation_text[i][conversation_text[i].index(":"):] for i in range(len(conversation_text))]
 
             conversation_text = " ".join(conversation_text)
 
