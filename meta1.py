@@ -10,7 +10,7 @@ import nltk
 nltk.download('punkt')
 nltk.download('averaged_perceptron_tagger')
 
-with open('test.json', 'r') as file:
+with open('train.json', 'r') as file:
     data = json.load(file)
 
 nlp = spacy.load("en_core_web_sm")
@@ -89,6 +89,8 @@ def predict_answer(conversation, question, choices):
  
     # Regra 4: Funções Gramaticais e Relações
     verbs = []
+    names = []
+
     sentences = nltk.sent_tokenize(conversation)
     for sent in sentences:
         tokens = nltk.word_tokenize(sent)
@@ -97,10 +99,15 @@ def predict_answer(conversation, question, choices):
             if tag[1].startswith("V") and tag[0] not in verbs:
                 v = nlp(tag[0])
                 verbs.append(v[0].lemma_)
+            if tag[1].startswith("N") and tag[0] not in names:
+                n = nlp(tag[0])
+                names.append(n[0].lemma_)
 
     for i, choice in enumerate(choices):
         lemmas = [token.lemma_ for token in nlp(choice)]
+
         scores[i] += sum(verbo in lemmas for verbo in verbs)
+        scores[i] += sum(nome in lemmas for nome in names)
 
     # Prever a opção de resposta com a pontuação mais alta
     predicted_idx = scores.index(max(scores))
