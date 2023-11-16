@@ -26,19 +26,11 @@ def extract_bigrams(text):
         bigrams.append(bigram)
     return bigrams
 
-#def extract_entities(text):
-    #return re.findall(r'\b[A-Z][a-z]*\b', text)
-
 '''
 Bigramas extraídos:
 Conversa: ['M: How', 'How long', ..., 'something new.']
 Pergunta: ["What's the", 'the woman', 'woman probably', 'probably going', 'going to', 'to do?']
 Opções de resposta: [['To teach', 'teach a', 'a different', 'different textbook.'], ['To change', 'change her', 'her job.'], ['To learn', 'learn a', 'a different', 'different textbook.']]
-
-Entidades Potenciais (palavras com a primeira letra maiúscula):
-Conversa: ['M', 'How', 'W', 'For', 'To', 'I', 'I', 'I']
-Pergunta: ['What']
-Opções de resposta: [['To'], ['To'], ['To']]
 '''
 
 # Análise de sentimentos
@@ -114,7 +106,6 @@ def predict_answer(conversation, question, choices):
     return choices[predicted_idx]
 
 # Funções necessárias para o SAS
-# TODO: verificar se isto tá certo
 def calculate_sas(true_answer, predicted_answer, model_name="sentence-transformers/paraphrase-MiniLM-L6-v2"):
 
     # Carregar modelo e tokenizer pré-treinados
