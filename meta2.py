@@ -2,33 +2,118 @@ import json
 import spacy
 import re
 from sklearn.feature_extraction.text import TfidfVectorizer
+import gensim.downloader as api
 import numpy as np
 
 nlp = spacy.load("en_core_web_sm")
 
-def topic_modelling(conv, options):
-    from sklearn.decomposition import LatentDirichletAllocation
+# -------------------------------------------------------------------------
+# Função para gerar Word2Vec Embeddings (2º representação)
+def get_word2vec_embeddings(text):
+    word2vec_model = api.load("word2vec-google-news-300") # carregar modelo Word2Vec pré-treinado
 
+    words = text.split()
+    embeddings = [word2vec_model[word] for word in words if word in word2vec_model]
+    # Média dos embeddings para representar todo o texto
+    return np.mean(embeddings, axis=0) if len(embeddings) > 0 else np.zeros(300)
+
+# Função de preparação das representações
+def prepare_data(conv, options):
+
+    # TF-IDF
+    tfidf_vectorizer = TfidfVectorizer(strip_accents='unicode')
+    tfidf_vectorizer.fit([conv] + options)
+    conv_tfidf = tfidf_vectorizer.transform([conv])
+    options_tfidf = tfidf_vectorizer.transform(options)
+
+    # Word2Vec
+    conv_w2v = get_word2vec_embeddings(conv)
+    options_w2v = np.array([get_word2vec_embeddings(opt) for opt in options])
+
+    return conv_tfidf, options_tfidf, conv_w2v, options_w2v
+# ---------------------------------------------------------------------------
+
+
+# Topic Modelling
+def topic_modelling(conv, options, conv_w2v, options_w2v):
+    from sklearn.decomposition import LatentDirichletAllocation
+    from torch import cosine_similarity
+
+    # Vetorização
     tf_vect = TfidfVectorizer(strip_accents='unicode')
     conv_vect = tf_vect.fit_transform([conv])
 
+    # Usar LDA com TF-IDF
     lda = LatentDirichletAllocation(n_components=3, doc_topic_prior=0.5, topic_word_prior=0.5)
     conv_topics = lda.fit_transform(conv_vect)
 
     opt_topics = [lda.transform(tf_vect.transform([option])) for option in options]
 
     similarity = [np.linalg.norm(conv_topics - opt_topics[i]) for i in range(len(options))]
-
     correct_option_index = max(range(len(options)), key=lambda i: similarity[i])
-    correct_option = choices[correct_option_index]
-    return correct_option
+    correct_option_tfidf = choices[correct_option_index]
+
+    # Usar similaridade de cosseno para Word2Vec (O LDA não é aplicado diretamente a embeddings densos como Word2Vec)
+    similarities = [cosine_similarity([conv_w2v], [opt_emb])[0][0] for opt_emb in options_w2v]
+    correct_option_index_w2v = np.argmax(similarities)
+    correct_option_w2v = options[correct_option_index_w2v]
+
+    return correct_option_tfidf, correct_option_w2v
 
 
+# Support Vector Machines - classificação binária
+def svm_prediction(conv, options):
+    from sklearn.svm import SVC
+
+    conv_tfidf, options_tfidf, conv_w2v, options_w2v = prepare_data(conv, options)
+
+    # SVM com TF-IDF
+    svm_model_tfidf = SVC(kernel='linear')
+    svm_model_tfidf.fit(conv_tfidf, [0])
+    predictions_tfidf = svm_model_tfidf.predict(options_tfidf)
+    pred_option_tfidf = options[np.argmax(predictions_tfidf)]
+
+    # SVM com Word2Vec
+    svm_model_w2v = SVC(kernel='linear')
+    svm_model_w2v.fit([conv_w2v], [0])
+    predictions_w2v = svm_model_w2v.predict(options_w2v)
+    pred_option_w2v = options[np.argmax(predictions_w2v)]
+
+    return pred_option_tfidf, pred_option_w2v
+
+
+# Árvore de Decisão
+def tree_prediction_both(conv, options):
+    from sklearn.tree import DecisionTreeClassifier
+
+    conv_tfidf, options_tfidf, conv_w2v, options_w2v = prepare_data(conv, options)
+
+    # Árvore de Decisão com TF-IDF
+    tree_model_tfidf = DecisionTreeClassifier()
+    tree_model_tfidf.fit(conv_tfidf, [0])
+    predictions_tfidf = tree_model_tfidf.predict(options_tfidf)
+    pred_option_tfidf = options[np.argmax(predictions_tfidf)]
+
+    # Árvore de Decisão com Word2Vec
+    tree_model_w2v = DecisionTreeClassifier()
+    tree_model_w2v.fit([conv_w2v], [0])
+    predictions_w2v = tree_model_w2v.predict(options_w2v)
+    pred_option_w2v = options[np.argmax(predictions_w2v)]
+
+    return pred_option_tfidf, pred_option_w2v
+
+
+# -------------------------------------------------------------------
 with open('train.json', 'r') as file:
     data = json.load(file)
 
 true_answers = []
-predicted_answers = []
+predicted_answers_topic_tfidf = []
+predicted_answers_topic_w2v = []
+predicted_answers_svm_tfidf = []
+predicted_answers_svm_w2v = []
+predicted_answers_tree_tfidf = []
+predicted_answers_tree_w2v = []
 
 for conversation_data in data:
     for qa_pair in conversation_data[1]:
@@ -73,6 +158,19 @@ for conversation_data in data:
         conversation_text = " ".join(conversation_text)
         nlp_conv = nlp(conversation_text)
 
+        # Preparar os dados para as representações
+        conv_tfidf, options_tfidf, conv_w2v, options_w2v = prepare_data(conversation_text, choices)
+
+        # Chamar as funções de previsão para cada modelo
+        pred_svm_tfidf, pred_svm_w2v = svm_prediction(conversation_text, choices)
+        pred_tree_tfidf, pred_tree_w2v = tree_prediction_both(conversation_text, choices)
+        pred_topic_tfidf, pred_topic_w2v = topic_modelling(conversation_text, choices, conv_w2v, options_w2v)
+
+        # Armazenar as respostas verdadeiras e as previstas
         true_answers.append(answer)
-        pred_answer = topic_modelling(conversation_text, choices)
-        predicted_answers.append(pred_answer)
+        predicted_answers_svm_tfidf.append(pred_svm_tfidf)
+        predicted_answers_svm_w2v.append(pred_svm_w2v)
+        predicted_answers_tree_tfidf.append(pred_tree_tfidf)
+        predicted_answers_tree_w2v.append(pred_tree_w2v)
+        predicted_answers_topic_tfidf.append(pred_topic_tfidf)
+        predicted_answers_topic_w2v.append(pred_topic_w2v)
