@@ -86,7 +86,7 @@ def topic_modelling(conv, quest, options, conv_w2v, options_w2v):
 
     best_sentence = conv_vect[np.argmax(best)]
 
-    sent_topics = lda.fit_transform(best_sentence)[0]
+    lda.fit_transform(best_sentence)[0]
     opt_topics = [lda.transform(opt_vect[i])[0] for i in range(len(opt_vect))]
 
     similarity = [np.sum(opt_topics[i]) + 0.4*cosine_similarity(best_sentence, opt_vect[i])
@@ -151,6 +151,24 @@ def tree_prediction_both(conv, options):
 
     return pred_option_tfidf, pred_option_w2v
 
+def naive_bayes(conv, options):
+    from sklearn.naive_bayes import GaussianNB
+    model = GaussianNB()
+
+    conv_tfidf, options_tfidf, conv_w2v, options_w2v = prepare_data(conv, options)
+
+    # Naive Bayes com TF-IDF
+    model.fit(conv_tfidf, [0])
+    predictions_tfidf = model.predict(options_tfidf)
+    pred_option_tfidf = options[np.argmax(predictions_tfidf)]
+
+    # Naive Bayes com Word2Vec
+    model.fit([conv_w2v], [0])
+    predictions_w2v = model.predict(options_w2v)
+    pred_option_w2v = options[np.argmax(predictions_w2v)]
+
+    return pred_option_tfidf, pred_option_w2v
+
 
 # -------------------------------------------------------------------
 with open('test.json', 'r') as file:
@@ -163,6 +181,8 @@ predicted_answers_svm_tfidf = []
 predicted_answers_svm_w2v = []
 predicted_answers_tree_tfidf = []
 predicted_answers_tree_w2v = []
+predicted_answers_nb_tfidf = []
+predicted_answers_nb_w2v = []
 
 for conversation_data in data:
     for qa_pair in conversation_data[1]:
@@ -211,9 +231,10 @@ for conversation_data in data:
         conv_tfidf, options_tfidf, conv_w2v, options_w2v = prepare_data(conversation_text, choices)
 
         # Chamar as funções de previsão para cada modelo
-        #pred_svm_tfidf, pred_svm_w2v = svm_prediction(conversation_text, choices)
-        #pred_tree_tfidf, pred_tree_w2v = tree_prediction_both(conversation_text, choices)
+        pred_svm_tfidf, pred_svm_w2v = svm_prediction(conversation_text, choices)
+        pred_tree_tfidf, pred_tree_w2v = tree_prediction_both(conversation_text, choices)
         pred_topic_tfidf, pred_topic_w2v = topic_modelling(conversation_text, question, choices, conv_w2v, options_w2v)
+        pred_nb_tfidf, pred_nb_w2v = naive_bayes(conversation_text, choices)
 
         # Armazenar as respostas verdadeiras e as previstas
         true_answers.append(answer)
@@ -223,3 +244,5 @@ for conversation_data in data:
         predicted_answers_tree_w2v.append(pred_tree_w2v)
         predicted_answers_topic_tfidf.append(pred_topic_tfidf)
         predicted_answers_topic_w2v.append(pred_topic_w2v)
+        predicted_answers_nb_tfidf.append(pred_nb_tfidf)
+        predicted_answers_nb_w2v.append(pred_nb_w2v)
