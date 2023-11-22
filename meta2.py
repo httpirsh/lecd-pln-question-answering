@@ -9,6 +9,7 @@ from transformers import AutoTokenizer, AutoModel
 import torch
 import gensim.downloader as api
 import numpy as np
+import scipy
 
 nltk.download('stopwords')
 nlp = spacy.load("en_core_web_sm")
@@ -183,10 +184,10 @@ def train_data():
 
             X_tfidf.append(all_tfidf)
             X_w2v.append(all_w2v)
-            y.append(1 if choice == a else 0)           
+            y.append(1 if choice == a else 0)
 
-    X_tfidf = np.vstack(X_tfidf)
-    return np.array(X_tfidf), np.array(X_w2v), np.array(y)
+    X_tfidf = scipy.sparse.vstack(X_tfidf)
+    return X_tfidf.toarray(), np.array(X_w2v), np.array(y), tfidf_vectorizer
 
 # ---------------------------------------------------------------------------
 
@@ -325,7 +326,7 @@ def calculate_sas(true_answer, predicted_answer, model_name="sentence-transforme
 
 # ---------------------------------------------------------------------------
 
-X_tfidf, X_w2v, y = train_data()
+X_tfidf, X_w2v, y, tf_vect = train_data()
 
 # Treino dos modelos
 from sklearn.svm import SVC
@@ -345,8 +346,6 @@ model_tfidf = GaussianNB()
 model_tfidf.fit(X_tfidf, y)
 model_w2v = GaussianNB()
 model_w2v.fit(X_w2v, y)
-
-tfidf_vectorizer = TfidfVectorizer(ngram_range=(1, 2), strip_accents='unicode')
 
 # ---------------------------------------------------------------------------
 
@@ -383,14 +382,15 @@ for conversation_data in data:
             conversation_text.append(choice)
             all = " ".join(conversation_text)
 
-            tfidf_vectorizer.fit([all])
-
-            all_tfidf = tfidf_vectorizer.transform([all])
+            all_tfidf = tf_vect.transform([all])
             all_w2v = get_word2vec_embeddings(word2vec_model, all)
 
             Xt_tfidf.append(all_tfidf)
             Xt_w2v.append(all_w2v)
-            yt.append(1 if choice == answer else 0)    
+            yt.append(1 if choice == answer else 0)
+
+        Xt_tfidf = scipy.sparse.vstack(Xt_tfidf)
+        Xt_tfidf = Xt_tfidf.toarray()
 
         # Chamar as funções de previsão para cada modelo
         pred_svm_tfidf, pred_svm_w2v = svm_prediction(svm_model_tfidf, svm_model_w2v, Xt_tfidf, Xt_w2v, choices)
