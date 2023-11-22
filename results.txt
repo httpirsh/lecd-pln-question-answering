@@ -1,0 +1,108 @@
+Nº total de questões: 2041
+
+Redução do diálogo, lematização, remover pontuação, remover stopwords
+
+> SVM: TF-IDF                                 > SVM: Word2Vec
+    EXACT MATCH: 626                              EXACT MATCH: 626
+    F1-SCORE: 0.3059276887302365                  F1-SCORE: 0.3059276887302365
+    SIMILARIDADE: 917.4750216181072               SIMILARIDADE: 917.4750216181072
+    SAS: 0.8314862251281738                       SAS: 0.8314862251281738
+    
+> Árvore de decisão: TF-IDF                   > Árvore de decisão: Word2Vec
+    EXACT MATCH: 650                              EXACT MATCH: 623
+    F1-SCORE: 0.31839399100545596                 F1-SCORE: 0.3046284925265817
+    SIMILARIDADE: 927.327977908471                SIMILARIDADE: 917.5165836085888
+    SAS: 0.8288314342498779                       SAS: 0.8300836086273193
+  
+> Naive Bayes: TF-IDF                         > Naive Bayes: Word2Vec
+    EXACT MATCH: 639                              EXACT MATCH: 616
+    F1-SCORE: 0.31232277983870343                 F1-SCORE: 0.30170841189949466
+    SIMILARIDADE: 929.5384798055823               SIMILARIDADE: 915.3375574684582
+    SAS: 0.8339005708694458                       SAS: 0.8292428255081177
+
+> Topic Modelling: TF-IDF                     > Topic Modelling: Word2Vec
+    EXACT MATCH: 727                              EXACT MATCH: 661
+    F1-SCORE: 0.3593126074752728                  F1-SCORE: 0.3228303897093706
+    SIMILARIDADE: 972.1677385419315               SIMILARIDADE: 943.1053330776288
+    SAS: 0.8430677652359009                       SAS: 0.8380003571510315
+
+
+Redução do diálogo, lematização, remover pontuação 
+
+> SVM: TF-IDF                                 > SVM: Word2Vec
+    EXACT MATCH: 626                              EXACT MATCH: 626
+    F1-SCORE: 0.3059276887302365                  F1-SCORE: 0.3059276887302365
+    SIMILARIDADE: 917.4750216181072               SIMILARIDADE: 917.4750216181072
+    SAS: 0.8314862251281738                       SAS: 0.8314862251281738
+    
+> Árvore de decisão: TF-IDF                   > Árvore de decisão: Word2Vec
+    EXACT MATCH: 652                              EXACT MATCH: 639
+    F1-SCORE: 0.31783968929975787                 F1-SCORE: 0.3144666373965737
+    SIMILARIDADE: 937.8575545215314               SIMILARIDADE: 926.880571316378
+    SAS: 0.8356248736381531                       SAS: 0.8327693343162537
+  
+> Naive Bayes: TF-IDF                         > Naive Bayes: Word2Vec
+    EXACT MATCH: 634                              EXACT MATCH: 636
+    F1-SCORE: 0.31019030509476364                 F1-SCORE: 0.31144517195472604
+    SIMILARIDADE: 922.0699014949083               SIMILARIDADE: 922.4441391711816
+    SAS: 0.8325279951095581                       SAS: 0.832636833190918
+
+> Topic Modelling: TF-IDF                     > Topic Modelling: Word2Vec
+    EXACT MATCH: 745                              EXACT MATCH: 661
+    F1-SCORE:  0.36767521226119954                F1-SCORE: 0.3228303897093706
+    SIMILARIDADE: 982.3204438005513               SIMILARIDADE: 943.1053330776288
+    SAS: 0.845254123210907                        SAS: 0.8380003571510315
+
+
+Redução do diálogo, lematização
+
+> SVM: TF-IDF                                 > SVM: Word2Vec
+    EXACT MATCH: 626                              EXACT MATCH: 626
+    F1-SCORE: 0.3059276887302365                  F1-SCORE: 0.3059276887302365
+    SIMILARIDADE: 917.4750216181072               SIMILARIDADE: 917.4750216181072
+    SAS: 0.8314862251281738                       SAS: 0.8314862251281738
+    
+> Árvore de decisão: TF-IDF                   > Árvore de decisão: Word2Vec
+    EXACT MATCH: 638                              EXACT MATCH: 627
+    F1-SCORE: 0.3119938447963926                  F1-SCORE: 0.3085093495431565
+    SIMILARIDADE: 929.1128104186699               SIMILARIDADE: 915.7496466321379
+    SAS: 0.8405551910400391                       SAS: 0.8392939567565918
+  
+> Naive Bayes: TF-IDF                         > Naive Bayes: Word2Vec
+    EXACT MATCH: 634                              EXACT MATCH: 636
+    F1-SCORE: 0.31019030509476364                 F1-SCORE: 0.31144517195472604
+    SIMILARIDADE: 922.0699014949083               SIMILARIDADE: 922.4441391711816
+    SAS: 0.8392683267593384                       SAS: 0.8395149111747742
+
+> Topic Modelling: TF-IDF                     > Topic Modelling: Word2Vec
+    EXACT MATCH: 751                              EXACT MATCH: 665
+    F1-SCORE: 0.37076836822059756                 F1-SCORE: 0.32587254326597787
+    SIMILARIDADE: 982.5437554376297               SIMILARIDADE: 944.2624406623211
+    SAS: 0.8497996926307678                       SAS: 0.8448190689086914
+
+
+Redução do diálogo
+
+> SVM: TF-IDF                                 > SVM: Word2Vec
+    EXACT MATCH: 626                              EXACT MATCH: 626
+    F1-SCORE: 0.3059276887302365                  F1-SCORE: 0.3059276887302365
+    SIMILARIDADE: 917.4750216181072               SIMILARIDADE: 917.4750216181072
+    SAS: 0.8314862251281738                       SAS: 0.8314862251281738
+    
+> Árvore de decisão: TF-IDF                   > Árvore de decisão: Word2Vec
+    EXACT MATCH: 627                              EXACT MATCH: 634
+    F1-SCORE: 0.30823739111343224                 F1-SCORE: 0.3092943857275067
+    SIMILARIDADE: 910.9247552613253               SIMILARIDADE: 914.2419365403675
+    SAS: 0.8373926877975464                       SAS: 0.8384435176849365
+  
+> Naive Bayes: TF-IDF                         > Naive Bayes: Word2Vec
+    EXACT MATCH: 626                              EXACT MATCH: 629
+    F1-SCORE: 0.3063183971562217                  F1-SCORE: 0.3088689795696165
+    SIMILARIDADE: 908.5880457308089               SIMILARIDADE: 909.8369180144457
+    SAS: 0.843119204044342                        SAS: 0.8339931964874268
+
+> Topic Modelling: TF-IDF                     > Topic Modelling: Word2Vec
+    EXACT MATCH: 725                              EXACT MATCH: 677
+    F1-SCORE: 0.3574920479379078                  F1-SCORE: 0.3316109226937253
+    SIMILARIDADE: 976.4864106513527               SIMILARIDADE: 960.2237165660737
+    SAS: 0.8478235006332397                       SAS: 0.8481367230415344
