@@ -165,7 +165,7 @@ def train_data():
             all_text.extend(options)
 
         n += 1
-        if n > 500:
+        if n > 500: # Usar 500 perguntas como dados de treino
             break
 
     tfidf_vectorizer = TfidfVectorizer(ngram_range=(1, 2), strip_accents='unicode')
@@ -181,14 +181,11 @@ def train_data():
             all_tfidf = tfidf_vectorizer.transform([all])
             all_w2v = get_word2vec_embeddings(word2vec_model, all)
 
-            X_tfidf.append([all_tfidf])
+            X_tfidf.append(all_tfidf)
             X_w2v.append(all_w2v)
             y.append(1 if choice == a else 0)           
 
-        n += 1
-        if n > 2:
-            break
-
+    X_tfidf = np.vstack(X_tfidf)
     return np.array(X_tfidf), np.array(X_w2v), np.array(y)
 
 # ---------------------------------------------------------------------------
@@ -383,7 +380,7 @@ for conversation_data in data:
         for choice in choices:
 
             conversation_text.append(question)
-            conversation_data.append(choice)
+            conversation_text.append(choice)
             all = " ".join(conversation_text)
 
             tfidf_vectorizer.fit([all])
@@ -391,7 +388,7 @@ for conversation_data in data:
             all_tfidf = tfidf_vectorizer.transform([all])
             all_w2v = get_word2vec_embeddings(word2vec_model, all)
 
-            Xt_tfidf.append([all_tfidf])
+            Xt_tfidf.append(all_tfidf)
             Xt_w2v.append(all_w2v)
             yt.append(1 if choice == answer else 0)    
 
