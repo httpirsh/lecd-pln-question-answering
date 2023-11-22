@@ -233,12 +233,12 @@ def topic_modelling(conv, quest, options):
 def svm_prediction(model_tf, model_w2v, x_tf, x_w2v, options):
 
     # SVM com TF-IDF
-    predictions_tfidf = model_tf.predict(x_tf)
-    pred_option_tfidf = options[np.argmax(predictions_tfidf)]
+    predictions_tfidf = model_tf.predict_proba(x_tf)
+    pred_option_tfidf = options[np.argmax(predictions_tfidf[:,1])]
 
     # SVM com Word2Vec
-    predictions_w2v = model_w2v.predict(x_w2v)
-    pred_option_w2v = options[np.argmax(predictions_w2v)]
+    predictions_w2v = model_w2v.predict_proba(x_w2v)
+    pred_option_w2v = options[np.argmax(predictions_w2v[:,1])]
 
     return pred_option_tfidf, pred_option_w2v
 
@@ -247,25 +247,26 @@ def svm_prediction(model_tf, model_w2v, x_tf, x_w2v, options):
 def tree_prediction_both(model_tf, model_w2v, x_tf, x_w2v, options):
 
     # Árvore de Decisão com TF-IDF
-    predictions_tfidf = model_tf.predict(x_tf)
-    pred_option_tfidf = options[np.argmax(predictions_tfidf)]
+    predictions_tfidf = model_tf.predict_proba(x_tf)
+    pred_option_tfidf = options[np.argmax(predictions_tfidf[:,1])]
 
     # Árvore de Decisão com Word2Vec
-    predictions_w2v = model_w2v.predict(x_w2v)
-    pred_option_w2v = options[np.argmax(predictions_w2v)]
+    predictions_w2v = model_w2v.predict_proba(x_w2v)
+    pred_option_w2v = options[np.argmax(predictions_w2v[:,1])]
 
     return pred_option_tfidf, pred_option_w2v
 
 
+# Naive Bayes
 def naive_bayes(model_tf, model_w2v, x_tf, x_w2v, options):
 
     # Naive Bayes com TF-IDF
-    predictions_tfidf = model_tf.predict(x_tf)
-    pred_option_tfidf = options[np.argmax(predictions_tfidf)]
+    predictions_tfidf = model_tf.predict_proba(x_tf)
+    pred_option_tfidf = options[np.argmax(predictions_tfidf[:,1])]
 
     # Naive Bayes com Word2Vec
-    predictions_w2v = model_w2v.predict(x_w2v)
-    pred_option_w2v = options[np.argmax(predictions_w2v)]
+    predictions_w2v = model_w2v.predict_proba(x_w2v)
+    pred_option_w2v = options[np.argmax(predictions_w2v[:,1])]
 
     return pred_option_tfidf, pred_option_w2v
 
@@ -330,9 +331,9 @@ X_tfidf, X_w2v, y, tf_vect = train_data()
 
 # Treino dos modelos
 from sklearn.svm import SVC
-svm_model_tfidf = SVC(kernel='linear')
+svm_model_tfidf = SVC(kernel='linear', probability=True)
 svm_model_tfidf.fit(X_tfidf, y)
-svm_model_w2v = SVC(kernel='linear')
+svm_model_w2v = SVC(kernel='linear', probability=True)
 svm_model_w2v.fit(X_w2v, y)
 
 from sklearn.tree import DecisionTreeClassifier
