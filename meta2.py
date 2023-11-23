@@ -172,7 +172,6 @@ def train_data():
     tfidf_vectorizer = TfidfVectorizer(ngram_range=(1, 2), strip_accents='unicode')
     tfidf_vectorizer.fit(all_text)
 
-    n=1
     for c, q, o, a in zip(text, questions, opt, ans):
 
         for choice in o:
